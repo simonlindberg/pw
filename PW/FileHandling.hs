@@ -1,7 +1,10 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 
 module PW.FileHandling
-  (BadPassword,
+  (
+  Password,
+  Passphrase,
+  BadPassword,
   createNewFile,
   addPasswordToFile,
   getPasswordsFromFile,
@@ -49,6 +52,7 @@ pw          (194 + tag_length) - (194 + tag_length + pw_length)
 
 type Tag          = String
 type Password     = String
+type Passphrase   = String
 
 data FileExist    = FileExist    String deriving (Show, Typeable)
 data FileNotExist = FileNotExist String deriving (Show, Typeable)
@@ -110,43 +114,43 @@ verifiedRead file_pw filename = do
 
 
 ------------------------------------------------------
-createNewFile :: FilePath -> Password -> IO ()
-createNewFile file file_pw = do
+createNewFile :: FilePath -> Passphrase -> IO ()
+createNewFile file passphrase = do
   checkNotExists filename  
-  write filename file_pw []
+  write filename passphrase []
     where
       filename = nameify file
 
 
-addPasswordToFile :: FilePath -> Tag -> Password -> Password -> IO ()
-addPasswordToFile file tag pw file_pw = do
+addPasswordToFile :: FilePath -> Tag -> Password -> Passphrase -> IO ()
+addPasswordToFile file tag pw passphrase = do
   checkExists filename
-  contents <- verifiedRead file_pw filename
-  write filename file_pw $ contents ++ [(tag,pw)]
+  contents <- verifiedRead passphrase filename
+  write filename passphrase $ contents ++ [(tag,pw)]
     where
       filename  = nameify file
 
-readPasswordsFromFile :: FilePath -> Password -> IO [(Tag, Password)]
-readPasswordsFromFile file file_pw = do
+readPasswordsFromFile :: FilePath -> Passphrase -> IO [(Tag, Password)]
+readPasswordsFromFile file passphrase = do
   checkExists filename
-  verifiedRead file_pw filename
+  verifiedRead passphrase filename
     where
       filename = nameify file
 
-getPasswordsFromFile :: FilePath -> Tag -> Password -> IO [String]
-getPasswordsFromFile file tag file_pw = do
+getPasswordsFromFile :: FilePath -> Tag -> Passphrase -> IO [String]
+getPasswordsFromFile file tag passphrase = do
   checkExists filename
-  contents <- verifiedRead file_pw filename
+  contents <- verifiedRead passphrase filename
   return $ lookupAll tag contents
     where
       filename = nameify file
 
-removePasswordFromFile :: FilePath -> Tag -> Password -> IO ()
-removePasswordFromFile file tag file_pw = do
+removePasswordFromFile :: FilePath -> Tag -> Passphrase -> IO ()
+removePasswordFromFile file tag passphrase = do
   checkExists filename
-  contents  <- verifiedRead file_pw filename
-  verifiers <- verifierPair file_pw
-  write filename file_pw $ removeTaggedLines contents
+  contents  <- verifiedRead passphrase filename
+  verifiers <- verifierPair passphrase
+  write filename passphrase $ removeTaggedLines contents
     where
       filename = nameify file
       
@@ -155,14 +159,14 @@ removePasswordFromFile file tag file_pw = do
         | t == tag  = removeTaggedLines pws
         | otherwise = (t,pw) : removeTaggedLines pws
 
-verifierPair :: Password -> IO B.ByteString
-verifierPair file_pw = do
+verifierPair :: Passphrase -> IO B.ByteString
+verifierPair passphrase = do
   verifier <- newVerifier
-  return $ B.append verifier (encryptByteString file_pw verifier)
+  return $ B.append verifier (encryptByteString passphrase verifier)
 
-write :: FilePath -> Password -> [(Tag, Password)] -> IO ()
-write file file_pw pws = do
-  verifiers <- verifierPair file_pw
+write :: FilePath -> Passphrase -> [(Tag, Password)] -> IO ()
+write file passphrase pws = do
+  verifiers <- verifierPair passphrase
   B.writeFile file $ B.append verifiers $ encryptPasswords pws
   where 
     encryptPasswords :: [(Tag, Password)] -> B.ByteString
@@ -172,6 +176,6 @@ write file file_pw pws = do
     encryptPassword :: Tag -> Password -> B.ByteString
     encryptPassword tag pw = B.cons tLength $ B.cons pwLength encrypted
       where
-        encrypted = encrypt file_pw (tag ++ pw)
+        encrypted = encrypt passphrase (tag ++ pw)
         tLength   = toEnum $ length tag
         pwLength  = toEnum $ length pw

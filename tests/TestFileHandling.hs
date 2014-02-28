@@ -32,65 +32,79 @@ instance Arbitrary Word where
 prop1 :: Word -> Property
 prop1 (Word pw) = monadicIO $ do
   run $ createNewFile file pw
-  nothing <- run $ getPasswordFromFile file "" pw
+  empty <- run $ getPasswordsFromFile file "" pw
   run $ cleanIO
-  assert $ nothing == Nothing
+  assert $ empty == []
 
 -- Property 2: Added password should be returned correctly.
 prop2 :: Word -> Word -> Word -> Property
-prop2 (Word tag) (Word pw) (Word file_pw) = monadicIO $ do
-  run $ createNewFile file file_pw
-  run $ addPasswordToFile file tag pw file_pw
-  pw_get <- run $ getPasswordFromFile file tag file_pw
+prop2 (Word tag) (Word pw) (Word passphrase) = monadicIO $ do
+  run $ createNewFile file passphrase
+  run $ addPasswordToFile file tag pw passphrase
+  pw_get <- run $ getPasswordsFromFile file tag passphrase
   run $ cleanIO
-  assert $ (Just pw) == pw_get
+  assert $ [pw] == pw_get
 
 
 -- Property 3: Removed password should not be removed.
 prop3 :: Word -> Word -> Word -> Property
-prop3 (Word tag) (Word pw) (Word file_pw) = monadicIO $ do
-  run $ createNewFile file file_pw
-  run $ addPasswordToFile file tag pw file_pw
-  run $ removePasswordFromFile file tag file_pw 
-  pw_get <- run $ getPasswordFromFile file tag file_pw
+prop3 (Word tag) (Word pw) (Word passphrase) = monadicIO $ do
+  run $ createNewFile file passphrase
+  run $ addPasswordToFile file tag pw passphrase
+  run $ removePasswordFromFile file tag passphrase
+  pw_get <- run $ getPasswordsFromFile file tag passphrase
   run $ cleanIO
-  assert $ pw_get == Nothing
+  assert $ pw_get == []
 
 -- Property 4: File should be unreadable with wrong password
 prop4 :: Word -> Word -> Word -> Word -> Property
-prop4 (Word tag) (Word pw) (Word file_pw) (Word fake_pw) = monadicIO $ do
-  if file_pw == fake_pw
+prop4 (Word tag) (Word pw) (Word passphrase) (Word fake_passphrase) = monadicIO $ do
+  if passphrase == fake_passphrase
     then assert True
     else do
-      run $ createNewFile file file_pw
-      run $ addPasswordToFile file tag pw file_pw
-      pw_get <- run $ catch (getPasswordFromFile file tag fake_pw) handle
+      run $ createNewFile file passphrase
+      run $ addPasswordToFile file tag pw passphrase
+      pw_get <- run $ catch (getPasswordsFromFile file tag fake_passphrase) handle
       run $ cleanIO
-      assert $ pw_get == Nothing
+      assert $ pw_get == []
         where 
-          handle :: BadPassword -> IO (Maybe String)
-          handle _ = return Nothing
+          handle :: BadPassword -> IO [String]
+          handle _ = return []
 
--- Proprty 5: Reading the file should yeild a correct info.
+-- Property 5: Reading the file should yeild a correct info.
 prop5 :: NonEmptyList Word -> NonEmptyList Word -> Word -> Property
-prop5 (NonEmpty tagWords) (NonEmpty pwWords) (Word file_pw) = monadicIO $ do
+prop5 (NonEmpty tagWords) (NonEmpty pwWords) (Word passphrase) = monadicIO $ do
   let len  = min (length tagWords) (length pwWords)
   let tags = map unword $ take len tagWords
   let pws  = map unword $ take len pwWords
 
-  run $ createNewFile file file_pw
+  run $ createNewFile file passphrase
   run $ addAll tags pws
-  content <- run $ readPasswordsFromFile file file_pw
+  content <- run $ readPasswordsFromFile file passphrase
   run $ cleanIO
   assert $ expected tags pws == content
-    where
-      unword (Word a) = a
-      
+    where      
       addAll []     []     = return ()
-      addAll (t:ts) (p:ps) = addPasswordToFile file t p file_pw >> addAll ts ps
+      addAll (t:ts) (p:ps) = addPasswordToFile file t p passphrase >> addAll ts ps
       
       expected []     []     = []
       expected (t:ts) (p:ps) = (t, p) : expected ts ps
+
+-- Property 6: Reading a tag should return all passwords with that tag.
+prop6 :: Word -> Word -> [Word] -> Property
+prop6 (Word tag) (Word passphrase) pwWords = monadicIO $ do
+  let pws = map unword pwWords
+  run $ createNewFile file passphrase
+  run $ addAll pws 
+  content <- run $ getPasswordsFromFile file tag passphrase
+  run $ cleanIO
+  assert $ pws == content
+    where
+      addAll []     = return ()
+      addAll (p:ps) = addPasswordToFile file tag p passphrase >> addAll ps
+
+unword :: Word -> String
+unword (Word a) = a
 
 test :: IO ()
 test = do putStrLn "\n--- Testing the file handling module"
@@ -108,6 +122,8 @@ test = do putStrLn "\n--- Testing the file handling module"
           cleanIO
           putStrLn "\nProprty 5: Reading the file should yeild a correct info."
           quickCheck prop5
+          putStrLn "\nProperty 6: Reading a tag should return all passwords with that tag."
+          quickCheck prop6
           
 cleanIO = do
   exists <- doesFileExist file

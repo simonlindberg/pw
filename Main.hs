@@ -21,6 +21,7 @@ fileOption   = ["-f","-file"]              :: Option
 helpOption   = ["-h","-help"]              :: Option
 
 type Option = [String]
+type Passphrase = String
 
 {-
 -g -gen -generate 
@@ -64,8 +65,8 @@ fileRelated args file = createFile >> addPW >> readFile
         case index createOption args of
           Nothing -> return ()
           otherwise -> do
-            pw_file <- newPassword
-            createNewFile file pw_file
+            passphrase <- newPassphrase
+            createNewFile file passphrase
       
       addPW :: IO ()
       addPW = case index addOption args of
@@ -76,8 +77,8 @@ fileRelated args file = createFile >> addPW >> readFile
           let genArg  = getArgFromOption genOption args
           
           realPW <- password maybePW genArg
-          filePW <- getPassword
-          addPasswordToFile file (deTag tag) realPW filePW
+          passphrase <- getPassphrase
+          addPasswordToFile file (deTag tag) realPW passphrase
             where
               deTag :: Maybe String -> String
               deTag (Just tag) = tag
@@ -95,19 +96,19 @@ fileRelated args file = createFile >> addPW >> readFile
         Just i  -> do
         
           let tag = getArgFromOption tagOption args
-          filePW <- getPassword
+          passphrase <- getPassphrase
           case tag of
-            Just t  -> getTaggedPasswords t filePW
-            Nothing -> getAllPassword filePW
+            Just t  -> getTaggedPasswords t passphrase
+            Nothing -> getAllPassword passphrase
             where
               getAllPassword :: String -> IO ()
-              getAllPassword filePW = do
-                pws <- readPasswordsFromFile file filePW
+              getAllPassword passphrase = do
+                pws <- readPasswordsFromFile file passphrase
                 print_ pws
 
               getTaggedPasswords :: String -> String -> IO ()
-              getTaggedPasswords tag filePW = do
-                pws <- getPasswordsFromFile file tag filePW
+              getTaggedPasswords tag passphrase = do
+                pws <- getPasswordsFromFile file tag passphrase
                 case pws of
                   [] -> putStrLn "No password found."
                   otherwise -> mapM_ putStrLn pws
@@ -117,18 +118,18 @@ fileRelated args file = createFile >> addPW >> readFile
               print_ ((a,b):as) = putStrLn (a ++ ": " ++ b) >> (print_ as)
 
 
-newPassword :: IO String
-newPassword = do 
-  p1 <- passwordPrompt "Choose a password: "
-  p2 <- passwordPrompt "Confirm password: "
+newPassphrase :: IO String
+newPassphrase = do 
+  p1 <- passwordPrompt "Choose a master passphrase: "
+  p2 <- passwordPrompt "Confirm the passphrase: "
 
-  if p1 == p2 then return p1 else putStrLn "passwords doesn't equal. Try again.\n" >> newPassword
+  if p1 == p2 then return p1 else putStrLn "passwords doesn't equal. Try again.\n" >> newPassphrase
 
-getPassword :: IO String
-getPassword = passwordPrompt "Password: "
+getPassphrase :: IO Passphrase
+getPassphrase = passphrasePrompt "Passphrase: "
 
-passwordPrompt :: String -> IO String
-passwordPrompt prompt = do
+passphrasePrompt :: String -> IO Passphrase
+passphrasePrompt prompt = do
   putStr prompt
   hFlush stdout
   pass <- withEcho False getLine
