@@ -3,10 +3,16 @@ pw
 
 A simple command-line password handler written in haskell.
 
+### Todo
+
+* Only request master passphrase once when needed multiple times.
+* more options for `-generate`
+* ability to choose encryption?
+
 ### Notes
 
+* The passwords are encrypted with AES in OFB mode. Where the `key` and `iv` are created with the master passphrase
 * The filehandling tests won't run on Windows, but I think it works.
-* Haven't managed to get the cabal installation completely functioning.
 
 ### Commands
 | Command              | Shorthand     | Explanation |
