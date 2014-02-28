@@ -10,7 +10,7 @@ A simple command-line password handler written in haskell.
 | `-create`            | `-c`          | Creates a new specified file. |
 | `-file path`         | `-f`          | Specifies the file, used by `-add`, `-create` and `-read`. |
 | `-generate [length]` | `-g`, `-gen`  | Genrates a randmized password with a optionally specified length, deafaults to 10. |
-| `-read [tag]`        | `-r`          | Reads a specified files passwords. If a `tag` is specified then only that passwords with that `tag` will be given, else it reads all the passwords. |
+| `-read`              | `-r`          | Reads a specified files passwords. If a `-tag tag1` is specified then only that passwords with that `tag1` will be given, else it reads all the passwords. |
 | `-password password` | `-p`, `-pw`   | Specifies a password to be used in the program. Used by `-add` |
 | `-tag tag`           | `-t`          | Specifies a tag for a password. Used by `-add` |
 
