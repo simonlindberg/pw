@@ -21,7 +21,6 @@ fileOption   = ["-f","-file"]              :: Option
 helpOption   = ["-h","-help"]              :: Option
 
 type Option = [String]
-type Passphrase = String
 
 {-
 -g -gen -generate 
@@ -120,8 +119,8 @@ fileRelated args file = createFile >> addPW >> readFile
 
 newPassphrase :: IO String
 newPassphrase = do 
-  p1 <- passwordPrompt "Choose a master passphrase: "
-  p2 <- passwordPrompt "Confirm the passphrase: "
+  p1 <- passphrasePrompt "Choose a master passphrase: "
+  p2 <- passphrasePrompt "Confirm the passphrase: "
 
   if p1 == p2 then return p1 else putStrLn "passwords doesn't equal. Try again.\n" >> newPassphrase
 
