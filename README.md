@@ -5,8 +5,9 @@ A simple command-line password handler written in haskell.
 
 ### Todo
 
-* Only request master passphrase once when needed multiple times.
-* more options for `-generate`
+* only request master passphrase once when needed multiple times.
+* not encrypt the tag for faster lookup.
+* more options for `-generate`?
 * ability to choose encryption?
 
 ### Notes
