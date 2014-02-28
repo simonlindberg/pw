@@ -4,7 +4,7 @@ module PW.FileHandling
   (BadPassword,
   createNewFile,
   addPasswordToFile,
-  getPasswordFromFile,
+  getPasswordsFromFile,
   readPasswordsFromFile,
   removePasswordFromFile
   )
@@ -133,11 +133,11 @@ readPasswordsFromFile file file_pw = do
     where
       filename = nameify file
 
-getPasswordFromFile :: FilePath -> Tag -> Password -> IO (Maybe String)
-getPasswordFromFile file tag file_pw = do
+getPasswordsFromFile :: FilePath -> Tag -> Password -> IO [String]
+getPasswordsFromFile file tag file_pw = do
   checkExists filename
   contents <- verifiedRead file_pw filename
-  return $ lookup tag contents
+  return $ lookupAll tag contents
     where
       filename = nameify file
 

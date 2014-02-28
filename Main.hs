@@ -97,7 +97,7 @@ fileRelated args file = createFile >> addPW >> readFile
           let tag = getArgFromOption tagOption args
           filePW <- getPassword
           case tag of
-            Just t  -> getTaggedPassword t filePW
+            Just t  -> getTaggedPasswords t filePW
             Nothing -> getAllPassword filePW
             where
               getAllPassword :: String -> IO ()
@@ -105,12 +105,12 @@ fileRelated args file = createFile >> addPW >> readFile
                 pws <- readPasswordsFromFile file filePW
                 print_ pws
 
-              getTaggedPassword :: String -> String -> IO ()
-              getTaggedPassword tag filePW = do
-                maybePW <- getPasswordFromFile file tag filePW
-                case maybePW of
-                  Just pw -> putStrLn pw
-                  Nothing -> putStrLn "No password found."
+              getTaggedPasswords :: String -> String -> IO ()
+              getTaggedPasswords tag filePW = do
+                pws <- getPasswordsFromFile file tag filePW
+                case pws of
+                  [] -> putStrLn "No password found."
+                  otherwise -> mapM_ putStrLn pws
 
               print_ :: [(String, String)] -> IO ()
               print_ []         = return ()

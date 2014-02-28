@@ -1,4 +1,4 @@
-module PW.Util (strictRead, index) where
+module PW.Util (strictRead, index, lookupAll) where
 
 import Data.List (elemIndex)
 
@@ -14,3 +14,6 @@ index []     _    = Nothing
 index (x:xs) list = case elemIndex x list of 
   Nothing -> index xs list
   value   -> value
+
+lookupAll :: Eq a => a -> [(a, b)] -> [b]
+lookupAll x pairs = [b | (a, b) <- pairs, a == x]
