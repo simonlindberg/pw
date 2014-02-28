@@ -3,6 +3,11 @@ pw
 
 A simple command-line password handler written in haskell.
 
+### Notes
+
+* The filehandling tests won't run on Windows, but I think it works.
+* Haven't managed to get the cabal installation completely functioning.
+
 ### Commands
 | Command              | Shorthand     | Explanation |
 | -------------------- | :-----------: | :---------- |
