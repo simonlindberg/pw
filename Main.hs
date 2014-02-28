@@ -49,6 +49,8 @@ read -f file      ->  prompts for password and prints all passwords.
 
 -}
 
+defaultPasswordLength = 10
+
 main :: IO ()
 main = do
   args <- getArgs
@@ -153,25 +155,20 @@ genPW :: [String] -> IO String
 genPW args = generatePW $ getGenerateLength args
   where
     getGenerateLength :: [String] -> Int
-    getGenerateLength args = let def = 10 in
-      case getArgFromOption genOption args of
-        Nothing  -> def
+    getGenerateLength args = case getArgFromOption genOption args of
+        Nothing  -> defaultPasswordLength
         Just len -> readIt len
           where
             readIt len = case reads len :: [(Int, String)] of
               [(l, "")] -> l
-              otherwise -> def
+              otherwise -> defaultPasswordLength
 
 generate :: [String] -> IO ()
 generate args = case index genOption args of
   Nothing   -> help args
   otherwise -> do
     pw <- genPW args -- Since no file is found, it has to be '-generate'
-    putStrLn pw  
-
-
-    
-
+    putStrLn pw
 
 
 help :: [String] -> IO ()
