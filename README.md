@@ -24,4 +24,4 @@ A simple command-line password handler written in haskell.
 
 `pw -add -file file.pw -tag fb -gen 15 -read` -- Adds a newly generated password of length 15 to `file.pw` with the tag `fb` AND then reads that password.
 
-`pw -create -file new_file.pw -add -tag twitter -gen 20 -read` --Creates the new file `new_file.pw` and adds a genereated password of length 20 and then reads that password.
+`pw -create -file new_file.pw -add -tag twitter -gen 20 -read` --Creates the new file `new_file.pw` and adds a genereated password of length 20 with the tag `twitter` and then reads that password.
