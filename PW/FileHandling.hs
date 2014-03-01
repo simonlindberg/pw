@@ -2,6 +2,7 @@
 
 module PW.FileHandling
   (
+  Tag,
   Password,
   Passphrase,
   BadPassword,
