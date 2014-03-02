@@ -1,188 +1,161 @@
--- cabal install aes
--- cabal install cryptohash
+module Main( main ) where
+
 import PW.FileHandling
 import PW.Generate
 import PW.Util
 
-import Control.Exception (bracket_)
+import Data.Maybe (isNothing, isJust, fromJust)
 
+import System.Console.GetOpt
 import System.Environment (getArgs)
-import System.IO (putChar, putStr, putStrLn, hFlush, stdout, stdin, hSetEcho, hGetEcho)
-
-addOption    = ["-a", "-add"]              :: Option
-genOption    = ["-g", "-gen", "-generate"] :: Option
-readOption   = ["-r", "-read"]             :: Option
-createOption = ["-c", "-create"]           :: Option
-
-pwOption     = ["-p", "-pw", "-password"]  :: Option
-tagOption    = ["-t", "-tag", "-id"]       :: Option
-fileOption   = ["-f","-file"]              :: Option
-
-helpOption   = ["-h","-help"]              :: Option
-
-type Option = [String]
-
-{-
--g -gen -generate 
--a -add
--c -create (length)
--r -read (tag)
------------------------------------
--f -file [filepath]
--p -pw -password [password]
--t -tag -id -ID [tag]
------------------------------------
--h -help
 
 
-generate 12 -> a twelve character long password is written to stdout.
-generate    -> a ten character long password is written to stdout.
+data Options = Options {
+  toAdd      :: Bool,
+  toCreate   :: Bool,
+  toGenerate :: Bool,
+  file       :: Maybe FilePath,
+  genLength  :: Int,
+  password   :: Maybe Password,
+  toRead     :: Bool,
+  tag        :: Maybe Tag,
+  passphrase :: Maybe Passphrase
+} deriving (Show, Eq)
 
-create -f file -> promted with request for password
+defaultOptions :: Options
+defaultOptions = Options {
+  password   = Nothing,
+  toGenerate = False,
+  genLength  = 10,
+  toCreate   = False,
+  toAdd      = False,
+  toRead     = False,
+  file       = Nothing,
+  tag        = Nothing,
+  passphrase = Nothing
+}
 
-add -t tag -p pw -f file                        -> prompts with password request
-add -t tag -generate 15 -create -f file         -> prompts with password request for the new file.
+header = ""
 
--------------------------------
-read -t tag -f file  ->  prompts for password and prints the given password (if available)
-read -f file      ->  prompts for password and prints all passwords.
+options :: [OptDescr (Options -> IO Options)]
+options = [
+  Option ['a', 'A'] ["add"]    (NoArg  optionAdd) "Adds a password.",
+  Option ['c', 'C'] ["create"] (NoArg  optionCreate) "Creates a new file.",
+  Option ['f', 'F'] ["file"]   (ReqArg optionFile "FILE") "Specifies the file to be used.",
+  Option ['g', 'G'] ["gen", "generate"] (OptArg optionGen "LENGTH") "Generates a random password, default length 10.",
+  Option ['p', 'P'] ["pw"]     (ReqArg optionPassword "PASSWORD") "Specifies the password to be used.",
+  Option ['r', 'R'] ["read"]   (NoArg  optionRead) "Reads passwords from a specified file. If a -tag is given it will only read that otherwise it reads all passwords.",
+  Option ['t', 'T'] ["tag"]    (ReqArg optionTag "TAG") "Specified the tag to be used."
+  ]
 
--}
+optionAdd :: Options -> IO Options
+optionAdd opts = return opts {toAdd = True}
 
-defaultPasswordLength = 10
+optionCreate :: Options -> IO Options
+optionCreate opts = return opts {toCreate = True}
+
+optionRead :: Options -> IO Options
+optionRead opts = return opts {toRead = True}
+
+optionFile :: String -> Options -> IO Options
+optionFile f opts = return opts {file = Just f}
+
+optionTag :: String -> Options -> IO Options
+optionTag t opts = return opts {tag = Just t}
+
+optionPassword :: String -> Options -> IO Options
+optionPassword pw opts = return opts {password = Just pw}
+
+optionGen :: Maybe String -> Options -> IO Options
+optionGen Nothing    opts = return opts {toGenerate = True}
+optionGen (Just str) opts = case reads str :: [(Int, String)] of
+  [(l, "")] -> return opts {genLength = l, toGenerate = True}
+  otherwise -> return opts {toGenerate = True}
+
 
 main :: IO ()
 main = do
   args <- getArgs
-  case getFile args of
-    Just file -> fileRelated args file
-    Nothing   -> generate args
+  case getOpt Permute options args of
+    (flags, [],  []) -> do
+      options <- foldl (>>=) (return defaultOptions) flags
+      execute options
+    (_, nonOpts, []) -> error $ "unrecognized arguments: " ++ unwords nonOpts
+    (_,   _,   msgs) -> error $ concat msgs ++ usageInfo header options
 
-fileRelated :: [String] -> String -> IO ()
-fileRelated args file = createFile >> addPW >> readFile
-    where
-      createFile :: IO ()
-      createFile = do
-        case index createOption args of
-          Nothing -> return ()
-          otherwise -> do
-            passphrase <- newPassphrase
-            createNewFile file passphrase
-      
-      addPW :: IO ()
-      addPW = case index addOption args of
-        Nothing -> return ()
-        otherwise -> do
-          let maybePW = getArgFromOption pwOption  args
-          let tag     = getArgFromOption tagOption args
-          let genArg  = getArgFromOption genOption args
-          
-          realPW <- password maybePW genArg
-          passphrase <- getPassphrase
-          addPasswordToFile file (deTag tag) realPW passphrase
-            where
-              deTag :: Maybe String -> String
-              deTag (Just tag) = tag
-              deTag Nothing    = error $ "Error! No tag, add a tag with '-tag my_tag'"
-              
-              --         -pw 'password'   -g '10' 
-              password :: Maybe String -> Maybe String -> IO String
-              password Nothing Nothing = error $ "Error! No password provided! Either add one with '-pw my_password' or generate one with '-generate'."
-              password (Just pw) _     = return pw 
-              password _ (Just gen)    = genPW args
-      
-      readFile :: IO ()
-      readFile = case index readOption args of
-        Nothing -> return ()
-        Just i  -> do
-        
-          let tag = getArgFromOption tagOption args
-          passphrase <- getPassphrase
-          case tag of
-            Just t  -> getTaggedPasswords t passphrase
-            Nothing -> getAllPassword passphrase
-            where
-              getAllPassword :: String -> IO ()
-              getAllPassword passphrase = do
-                pws <- readPasswordsFromFile file passphrase
-                print_ pws
+execute :: Options -> IO ()
+execute opts
+  | toCreate opts   = create opts
+  | toAdd opts      = add    opts
+  | toRead opts     = read_  opts
+  | toGenerate opts = generate opts >>= (\t -> putStrLn t)
+  | otherwise       = return ()
 
-              getTaggedPasswords :: String -> String -> IO ()
-              getTaggedPasswords tag passphrase = do
-                pws <- getPasswordsFromFile file tag passphrase
-                case pws of
-                  [] -> putStrLn "No password found."
-                  otherwise -> mapM_ putStrLn pws
+create :: Options -> IO ()
+create options
+  | isNothing $ file options = error $ "no file specified!"
+  | otherwise = do
+    let (Just f) = file options
+    passphrase <- newPassphrase
+    createNewFile f passphrase
+    execute $ options {toCreate = False, passphrase = (Just passphrase)}
 
-              print_ :: [(String, String)] -> IO ()
-              print_ []         = return ()
-              print_ ((a,b):as) = putStrLn (a ++ ": " ++ b) >> (print_ as)
+add :: Options -> IO ()
+add options
+  | isNothing $ file options    = error $ "no file specified!"
+  | isNothing $ tag options     = error $ "no tag specified!"
+  | (not . anyPassword) options = error $ "no password provided!"
+  | isJust $ passphrase options = addPW options
+  | otherwise = do
+    passphrase <- getPassphrase
+    addPW $ options {passphrase = (Just passphrase)}
 
+addPW :: Options -> IO ()
+addPW options = do
+  let (Just t) = tag options
+  let (Just f) = file options
+  let (Just p) = passphrase options
+  pw <- getPassword options
+  addPasswordToFile f t pw p
+  execute $ options {toAdd = False}
 
-newPassphrase :: IO String
-newPassphrase = do 
-  p1 <- passphrasePrompt "Choose a master passphrase: "
-  p2 <- passphrasePrompt "Confirm the passphrase: "
+getPassword :: Options -> IO String
+getPassword options 
+  | toGenerate options = generate options
+  | isJust $ password options = (return . fromJust . password) options
+  | otherwise = error $ "no password specified!"
 
-  if p1 == p2 then return p1 else putStrLn "passwords doesn't equal. Try again.\n" >> newPassphrase
+anyPassword :: Options -> Bool
+anyPassword options = (isJust . password) options || toGenerate options
 
-getPassphrase :: IO Passphrase
-getPassphrase = passphrasePrompt "Passphrase: "
+read_ :: Options -> IO ()
+read_ options
+  | isNothing $  file options   = error $ "no file specified!"
+  | isJust $ passphrase options = readPWs options
+  | otherwise = do
+    passphrase <- getPassphrase
+    readPWs $ options {passphrase = (Just passphrase)}
 
-passphrasePrompt :: String -> IO Passphrase
-passphrasePrompt prompt = do
-  putStr prompt
-  hFlush stdout
-  pass <- withEcho False getLine
-  putChar '\n'
-  return pass
+readPWs :: Options -> IO ()
+readPWs options = do
+  let (Just f) = file options
+  let (Just p) = passphrase options
+  case tag options of
+    Nothing -> readAll f p
+    Just t  -> readTag t f p
 
-withEcho :: Bool -> IO a -> IO a
-withEcho echo action = do
-  old <- hGetEcho stdin
-  bracket_ (hSetEcho stdin echo) (hSetEcho stdin old) action
-
-getArgFromOption :: Option -> [String] -> Maybe String
-getArgFromOption option args = case index option args of
-  Just i  -> checkLength (i + 1) -- Just $ args !! (i + 1)
-  Nothing -> Nothing
-  where checkLength i = if length args <= i then Nothing else Just $ args !! i
-
-getFile :: [String] -> Maybe String
-getFile = getArgFromOption fileOption
-
-genPW :: [String] -> IO String
-genPW args = generatePW $ getGenerateLength args
+readAll :: FilePath -> Passphrase -> IO ()
+readAll f p = do
+ pws <- readPasswordsFromFile f p
+ print_ pws
   where
-    getGenerateLength :: [String] -> Int
-    getGenerateLength args = case getArgFromOption genOption args of
-        Nothing  -> defaultPasswordLength
-        Just len -> readIt len
-          where
-            readIt len = case reads len :: [(Int, String)] of
-              [(l, "")] -> l
-              otherwise -> defaultPasswordLength
+    print_ []          = return ()
+    print_ ((t,p):pws) = putStrLn (t ++ ": " ++ p) >> (print_ pws)
 
-generate :: [String] -> IO ()
-generate args = case index genOption args of
-  Nothing   -> help args
-  otherwise -> do
-    pw <- genPW args -- Since no file is found, it has to be '-generate'
-    putStrLn pw
+readTag :: Tag -> FilePath -> Passphrase -> IO ()
+readTag t f p = do
+  pws <- getPasswordsFromFile f t p
+  mapM_ putStrLn pws
 
-
-help :: [String] -> IO ()
-help args = case index helpOption args of
-  Nothing   -> error "Incorrect parameters (you might just have forgotten to specifiy a file). Try -help."
-  otherwise -> putStrLn $ gen ++ add ++ create ++ read ++ file ++ pw ++ tag ++ examples
-  where
-    gen    = "\'-generate\'\tGenerates a random password. Takes an optional integer as input, the integer determineds the length of the password. The default length is ten.\n\n"
-    add    = "\'-add\'\t\tAdds a new password to a specified file. Requires a file, a tag and a password (either specified with -password or generated with -generate).\n\n"
-    create = "\'-create\'\tCreates a new file. Requires a specified file.\n\n"
-    read   = "\'-read\'\t\tReads passwords from a specified file. Takes an optional tag as input, if given it will only print the password related to it otherwise all passwords will be printed.\n\n"
-
-    file   = "\'-file\'\t\tSpecifies the file to be used.\n\n"
-    pw     = "\'-password\'\tSpecifies the password to be used.\n\n"
-    tag    = "\'-tag\'\t\tSpecified the tag to be used.\n\n"
-
-    examples = ""
+generate :: Options -> IO String
+generate = generatePW . genLength
