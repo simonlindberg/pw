@@ -17,5 +17,5 @@ generatePW len = pick len
           r <- randomRIO (0, (length ref) - 1)
           return (ref !! r)
     
-    ref :: String
-    ref = ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "$!@#%&/\\()[]{}=?+^*'-_.:,;<>~"
+ref :: String
+ref = ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "$!@#%&/\\()[]{}=?+^*'-_.:,;<>~"

@@ -145,6 +145,8 @@ getPasswordsFromFile file tag passphrase = do
   return $ lookupAll tag contents
     where
       filename = nameify file
+      lookupAll :: Eq a => a -> [(a, b)] -> [b]
+      lookupAll x pairs = [b | (a, b) <- pairs, a == x]
 
 removePasswordFromFile :: FilePath -> Tag -> Passphrase -> IO ()
 removePasswordFromFile file tag passphrase = do
