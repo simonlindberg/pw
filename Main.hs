@@ -35,17 +35,17 @@ defaultOptions = Options {
   passphrase = Nothing
 }
 
-header = ""
+header = "Usage: "
 
 options :: [OptDescr (Options -> IO Options)]
 options = [
-  Option ['a', 'A'] ["add"]    (NoArg  optionAdd) "Adds a password.",
-  Option ['c', 'C'] ["create"] (NoArg  optionCreate) "Creates a new file.",
-  Option ['f', 'F'] ["file"]   (ReqArg optionFile "FILE") "Specifies the file to be used.",
-  Option ['g', 'G'] ["gen", "generate"] (OptArg optionGen "LENGTH") "Generates a random password, default length 10.",
-  Option ['p', 'P'] ["pw"]     (ReqArg optionPassword "PASSWORD") "Specifies the password to be used.",
-  Option ['r', 'R'] ["read"]   (NoArg  optionRead) "Reads passwords from a specified file. If a -tag is given it will only read that otherwise it reads all passwords.",
-  Option ['t', 'T'] ["tag"]    (ReqArg optionTag "TAG") "Specified the tag to be used."
+  Option ['a'] ["add"]    (NoArg  optionAdd) "Adds a password.",
+  Option ['c'] ["create"] (NoArg  optionCreate) "Creates a new file.",
+  Option ['f'] ["file"]   (ReqArg optionFile "FILE") "Specifies the file to be used.",
+  Option ['g'] ["generate", "gen"] (OptArg optionGen "LENGTH") "Generates a random password, default length 10.",
+  Option ['p'] ["password", "pw"]     (ReqArg optionPassword "PASSWORD") "Specifies the password to be used.",
+  Option ['r'] ["read"]   (NoArg  optionRead) "Reads passwords from a specified file. If a -tag is given it will only read that otherwise it reads all passwords.",
+  Option ['t'] ["tag"]    (ReqArg optionTag "TAG") "Specified the tag to be used."
   ]
 
 optionAdd :: Options -> IO Options
