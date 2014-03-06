@@ -35,10 +35,10 @@ defaultOptions = Options {
   passphrase = Nothing
 }
 
-header = "Usage: "
+header = "\tUsage: "
 
-options :: [OptDescr (Options -> IO Options)]
-options = [
+optionFlags :: [OptDescr (Options -> IO Options)]
+optionFlags = [
   Option ['a'] ["add"]    (NoArg  optionAdd) "Adds a password.",
   Option ['c'] ["create"] (NoArg  optionCreate) "Creates a new file.",
   Option ['f'] ["file"]   (ReqArg optionFile "FILE") "Specifies the file to be used.",
@@ -76,12 +76,10 @@ optionGen (Just str) opts = case reads str :: [(Int, String)] of
 main :: IO ()
 main = do
   args <- getArgs
-  case getOpt Permute options args of
-    (flags, [],  []) -> do
-      options <- foldl (>>=) (return defaultOptions) flags
-      execute options
+  case getOpt Permute optionFlags args of
+    (flags, [],  []) -> foldl (>>=) (return defaultOptions) flags >>= (\options -> execute options)
     (_, nonOpts, []) -> error $ "unrecognized arguments: " ++ unwords nonOpts
-    (_,   _,   msgs) -> error $ concat msgs ++ usageInfo header options
+    (_,   _,   msgs) -> error $ concat msgs ++ usageInfo header optionFlags
 
 execute :: Options -> IO ()
 execute opts
