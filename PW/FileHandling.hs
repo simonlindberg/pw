@@ -19,7 +19,6 @@ import PW.Cipher
 import System.Directory
 import Control.Exception
 import Data.Typeable.Internal
-import qualified Crypto.Hash.SHA512 as SHA512 -- cabal install cryptohash
 import qualified Data.ByteString.Char8 as B
 import Data.ByteString.Internal (ByteString(PS))
 import System.Entropy (getEntropy)

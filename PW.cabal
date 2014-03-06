@@ -50,5 +50,5 @@ executable pw
   -- other-modules:       
   
   -- Other library packages from which modules are imported.
-  build-depends:       base ==4.6.*, AES ==0.2.*, random ==1.0.*, bytestring ==0.10.*, directory ==1.2.*, cryptohash ==0.11.*, entropy ==0.2.*, QuickCheck ==2.6.*
+  build-depends:       base ==4.6.*, AES ==0.2.*, random ==1.0.*, bytestring ==0.10.*, directory ==1.2.*, entropy ==0.2.*, QuickCheck ==2.6.*
   
