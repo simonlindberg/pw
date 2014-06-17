@@ -6,7 +6,7 @@ import PW.Util
 
 import Data.Maybe (isNothing, isJust, fromJust)
 
-import System.Console.GetOpt
+import System.Console.GetOpt (getOpt, usageInfo, ArgOrder (..), OptDescr (..), ArgDescr (..))
 import System.Environment (getArgs)
 
 
